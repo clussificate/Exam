@@ -1,0 +1,207 @@
+##### date:2017-6-17##
+##### theme: Ridge and Lasso
+
+
+LAozone = read.csv('LAozone.txt',sep = ',', header = T)
+
+# split train set and test set.
+set.seed(1111)
+index = sample(1:nrow(LAozone),nrow(LAozone)*2/3,replace = F)
+train_set = LAozone[index,]
+test_set = LAozone[-index,]
+
+train_set$ozone = train_set$ozone^(1/3)
+test_set$ozone = test_set$ozone^(1/3)
+
+y_train = train_set[,1]
+X_train = train_set[,-1]
+y_test = test_set[,1]
+X_test = test_set[,-1]
+
+
+# find the best subset model for each model size
+library(leaps)
+subset = leaps(x = X_train,y = y_train)
+mat = cbind(subset$Cp,subset$size)
+df = as.data.frame(mat)
+names(df) = c('Cp','size')
+for(i in 1:9){
+  dfnew = df[df$size==i+1,]
+  min = min(dfnew$Cp)
+  index = which(subset$Cp == min)
+  cat('Chosing the best sub model','when the number of variavles is ',i,':','\n');
+  print(subset$which[index,])
+}
+
+#plot Cp value with respect to the degree of freedom p+ 1
+plot(x=subset$size,y=subset$Cp,xlab='degree of freedom',ylab='Cp')
+
+#train error and test error with p+1
+
+# define a function that calculate sum((yhat-y)^2)
+error = function(yhat,y){
+  result = sum((yhat-y)^2)/length(yhat)
+  return(result)
+}
+trainerr = list()
+testerr = list()
+
+# p=0
+fit0 = lm(ozone~1,data = train_set)
+# train error
+yhat1 = predict(fit0,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit0,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=1
+fit1 = lm(ozone~temp,data = train_set)
+# train error
+yhat1 = predict(fit1,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit1,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=2
+fit2 = lm(ozone~temp+ibh,data = train_set)
+# train error
+yhat1 = predict(fit2,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit2,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=3
+fit3 = lm(ozone~humidity+temp+ibh,data = train_set)
+# train error
+yhat1 = predict(fit3,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit3,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=4
+fit4 = lm(ozone~humidity+temp+ibh+doy,data = train_set)
+# train error
+yhat1 = predict(fit4,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit4,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=5
+fit5 = lm(ozone~humidity+temp+ibh+vis+doy,data = train_set)
+# train error
+yhat1 = predict(fit5,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit5,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=6
+fit6 = lm(ozone~humidity+temp+ibh+ibt+vis+doy,data = train_set)
+# train error
+yhat1 = predict(fit6,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit6,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=7
+fit7 = lm(ozone~vh+humidity+temp+ibh+ibt+vis+doy,data = train_set)
+# train error
+yhat1 = predict(fit7,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit7,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=8
+fit8 = lm(ozone~vh+wind+humidity+temp+ibh+ibt+vis+doy,data = train_set)
+# train error
+yhat1 = predict(fit8,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit8,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+# p=9
+fit9 = lm(ozone~.,data = train_set)
+# train error
+yhat1 = predict(fit9,X_train)
+trainerr = append(trainerr,error(yhat1,y_train))
+#test error
+yhat2 = predict(fit9,X_test)
+testerr = append(testerr,error(yhat2,y_test))
+
+p = c(1:10)
+matplot(c(1,10),c(0,0.28),type = "n", xlab = 'p+1', ylab = 'error')
+points(x = p, y = testerr,col = 'blue');
+points(x = p, y = trainerr,col = 'red');
+
+###################################################quetion 2################################################
+
+train_set2 = train_set
+test_set2 = test_set
+train_set2[,2:10] = scale(train_set[,2:10]);  # standardizing the trainset
+test_set2[,2:10] = scale(test_set[,2:10]);
+x_train_lasso = train_set2[,-1]
+y_train_lasso = train_set2[,1]
+x_test_lasso = test_set2[,-1]
+y_test_lasso = test_set2[,1]
+
+library(glmnet)
+lasso_fit = glmnet(x=as.matrix(train_set2[,2:10]), y=train_set2[,1],family = 'gaussian', nlambda = 50, alpha = 1)
+#  test error in lasso with different lambdas
+lasso_yhat = predict(lasso_fit,newx = as.matrix(x_test_lasso),s=c(lasso_fit$lambda))
+lasso_test_errs = list()
+for(i in 1:dim(lasso_yhat)[2]){
+  terror = error(lasso_yhat[,i],y_test_lasso)
+  lasso_test_errs = append(lasso_test_errs,terror)
+}
+plot(x = lasso_fit$lambda, y = lasso_test_errs, xlab = 'lambda', ylab = 'test error')
+
+# train error
+lasso_yhat2 = predict(lasso_fit,newx = as.matrix(x_train_lasso),s=c(lasso_fit$lambda))
+lasso_train_errs = list()
+for(i in 1:dim(lasso_yhat)[2]){
+  trerror = error(lasso_yhat2[,i],y_train_lasso)
+  lasso_train_errs = append(lasso_train_errs,trerror)
+}
+plot(x = lasso_fit$lambda, y = lasso_train_errs, xlab = 'lambda', ylab = 'train error')
+
+###################################################quetion 3################################################
+train_set3 = train_set
+test_set3 = test_set
+train_set3[,2:10] = scale(train_set[,2:10]);  # standardizing the trainset
+test_set3[,2:10] = scale(test_set[,2:10]);
+x_train_ridge = train_set3[,-1]
+y_train_ridge = train_set3[,1]
+x_test_ridge = test_set3[,-1]
+y_test_ridge = test_set3[,1]
+
+ridge_fit = glmnet(x=as.matrix(train_set2[,2:10]), y=train_set2[,1],family = 'gaussian', nlambda = 50, alpha = 0)
+#  test error in ridge with different lambdas
+ridge_yhat = predict(ridge_fit,newx = as.matrix(x_test_ridge),s=c(ridge_fit$lambda))
+ridge_test_errs = list()
+for(i in 1:dim(ridge_yhat)[2]){
+  terror = error(ridge_yhat[,i],y_test_ridge)
+  ridge_test_errs = append(ridge_test_errs,terror)
+}
+
+# train error
+ridge_yhat = predict(ridge_fit,newx = as.matrix(x_train_ridge),s=c(ridge_fit$lambda))
+ridge_train_errs = list()
+for(i in 1:dim(ridge_yhat)[2]){
+  terror = error(ridge_yhat[,i],y_train_ridge)
+  ridge_train_errs = append(ridge_train_errs,terror)
+}
+
+
+matplot(c(1,400),c(0,0.3),type = "n", xlab = 'p+1', ylab = 'error')
+points(x = ridge_fit$lambda, y = ridge_train_errs, col = 'blue')
+points(x = ridge_fit$lambda, y = ridge_test_errs,col = 'red')
+
+
